@@ -66,7 +66,6 @@ for imagePath in imagePaths:
 	#label = imagePath[imagePath.rfind("/") + 1:].split("_")[0]
         label = imagePath.split("/")[-2]
 	image = cv2.imread(imagePath)
-        print(imagePath)
 
 	# extract features from the image, then update the list of lables and
 	# features
@@ -115,4 +114,5 @@ for i in np.random.randint(0, high=len(imagePaths), size=(10,)):
 	print("[PREDICTION] {}: {}".format(filename, prediction))
 	cv2.putText(image, prediction, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
 	cv2.imshow("Image", image)
-	cv2.waitKey(0)
+
+cv2.waitKey(0)
