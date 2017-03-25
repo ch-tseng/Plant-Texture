@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
+import timeit
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from sklearn.ensemble import RandomForestClassifier
@@ -11,6 +12,8 @@ import numpy as np
 import argparse
 import mahotas
 import cv2
+
+start = timeit.default_timer()
 
 def describe(image, ftype="Hara"):
         #上面指令是從圖片的HSV色彩模型中，取得其平均值及標準差（有RGB三個channels，因此會各有3組平均值及標準差）作為特徵值
@@ -29,10 +32,14 @@ def describe(image, ftype="Hara"):
     	    return np.hstack([colorStats, haralick])
         
 	else:
+            #P=30
             numPoints = 30
+            #r=3
             radius = 3
+            #eps指The "close-enough" factor，為一極小值，用以判斷兩數是否相當接近，在此是避免相除時分母為零發生錯誤
             eps = 1e-7
             lbp = feature.local_binary_pattern(gray, numPoints, radius, method="uniform")
+            #Numpy的ravel()類似flattern
             (hist, _) = np.histogram(lbp.ravel(), bins=range(0, numPoints + 3), range=(0, numPoints + 2))
 
             # normalize the histogram
@@ -43,7 +50,7 @@ def describe(image, ftype="Hara"):
         
 
 ap = argparse.ArgumentParser()
-ap.add_argument("-t", "--type", required=True, help="LBA or Hara?")
+ap.add_argument("-t", "--ftype", required=True, help="LBA or Hara?")
 ap.add_argument("-d", "--dataset", required=True, help="path to 8 scene category dataset")
 ap.add_argument("-f", "--forest", type=int, default=-1,
 	help="whether or not a Random Forest should be used")
@@ -58,7 +65,7 @@ for imagePath in imagePaths:
         label = imagePath.split("/")[-2]
 	image = cv2.imread(imagePath)
 
-	features = describe(image)
+	features = describe(image, ftype=args["ftype"])
 	labels.append(label)
 	data.append(features)
 
@@ -82,12 +89,15 @@ for i in np.random.randint(0, high=len(imagePaths), size=(10,)):
 	imagePath = imagePaths[i]
 	filename = imagePath[imagePath.rfind("/") + 1:]
 	image = cv2.imread(imagePath)
-	features = describe(image)
+	features = describe(image, ftype=args["ftype"])
 	prediction = model.predict(features.reshape(1, -1))[0]
 
 	# show the prediction
-	print("[PREDICTION] {}: {}".format(filename, prediction))
+	print("[PREDICTION #"+str(i)+"] {}: {}".format(filename, prediction))
 	cv2.putText(image, prediction, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
-	cv2.imshow("Image #"+str(i), image)
+	cv2.imshow("#"+str(i), image)
+
+stop = timeit.default_timer()
+print ("Execute time: {}".format(stop - start ))
 
 cv2.waitKey(0)
