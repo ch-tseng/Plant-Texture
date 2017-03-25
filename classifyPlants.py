@@ -3,13 +3,14 @@
 
 # import the necessary packages
 from __future__ import print_function
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.cross_validation import train_test_split
+#from sklearn.neighbors import KNeighborsClassifier
+#from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.svm import SVC
-from sklearn.linear_model import LogisticRegression
+#from sklearn.tree import DecisionTreeClassifier
+#from sklearn.svm import SVC
+#from sklearn.linear_model import LogisticRegression
 from skimage import feature
 from imutils import paths
 import numpy as np
@@ -17,7 +18,7 @@ import argparse
 import mahotas
 import cv2
 
-def describe(image):
+def describe(image, ftype="Hara"):
         #上面指令是從圖片的HSV色彩模型中，取得其平均值及標準差（有RGB三個channels，因此會各有3組平均值及標準差）作為特徵值
 	(means, stds) = cv2.meanStdDev(cv2.cvtColor(image, cv2.COLOR_BGR2HSV))
         #進行降維處理：將means及stds各3組array使用concatenate指令合成1組，再予以扁平化（變成一維）。
@@ -26,28 +27,30 @@ def describe(image):
         #將圖片轉為灰階
 	gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-        '''
-        #取Haralick紋理特徵(texture features)的平均值
-	haralick = mahotas.features.haralick(gray).mean(axis=0)
+        if(ftype=="Hara"):
+            #取Haralick紋理特徵(texture features)的平均值
+    	    haralick = mahotas.features.haralick(gray).mean(axis=0)
 
-        #使用np.hstack將兩個一維的特徵陣列colorStats及haralick合成一個
-	return np.hstack([colorStats, haralick])
-        '''
-        numPoints = 30
-        radius = 3
-        eps = 1e-7
-        lbp = feature.local_binary_pattern(gray, numPoints, radius, method="uniform")
-        (hist, _) = np.histogram(lbp.ravel(), bins=range(0, numPoints + 3), range=(0, numPoints + 2))
+            #使用np.hstack將兩個一維的特徵陣列colorStats及haralick合成一個
+    	    return np.hstack([colorStats, haralick])
+        
+	else:
+            numPoints = 30
+            radius = 3
+            eps = 1e-7
+            lbp = feature.local_binary_pattern(gray, numPoints, radius, method="uniform")
+            (hist, _) = np.histogram(lbp.ravel(), bins=range(0, numPoints + 3), range=(0, numPoints + 2))
 
-        # normalize the histogram
-        hist = hist.astype("float")
-        hist /= (hist.sum() + eps)
+            # normalize the histogram
+            hist = hist.astype("float")
+            hist /= (hist.sum() + eps)
 
-        return np.hstack([colorStats, hist])
+            return np.hstack([colorStats, hist])
         
 
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
+ap.add_argument("-t", "--type", required=True, help="LBA or Hara?")
 ap.add_argument("-d", "--dataset", required=True, help="path to 8 scene category dataset")
 ap.add_argument("-f", "--forest", type=int, default=-1,
 	help="whether or not a Random Forest should be used")
@@ -81,7 +84,7 @@ for imagePath in imagePaths:
 # initialize the model as a decision tree
 #model = DecisionTreeClassifier(criterion='gini', random_state=84)
 #model = DecisionTreeClassifier(criterion='entropy', random_state=84)
-model = RandomForestClassifier(n_estimators=80, random_state=42)
+model = RandomForestClassifier(n_estimators=args['forest'], random_state=42)
 #model = KNeighborsClassifier(n_neighbors=30)
 #model = SVC(kernel="linear")
 #model = SVC(kernel="poly", degree=2, coef0=1)
@@ -113,6 +116,6 @@ for i in np.random.randint(0, high=len(imagePaths), size=(10,)):
 	# show the prediction
 	print("[PREDICTION] {}: {}".format(filename, prediction))
 	cv2.putText(image, prediction, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
-	cv2.imshow("Image", image)
+	cv2.imshow("Image #"+str(i), image)
 
 cv2.waitKey(0)
